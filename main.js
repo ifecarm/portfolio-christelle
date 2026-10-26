@@ -7,6 +7,31 @@
   const root = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+
+  /* menu mobile : un bouton + un panneau plein écran avec tous les liens (sans dépendre de GSAP) */
+  (() => {
+    const bar = $('[data-top]'), navs = $$('[data-nav]');
+    if (!bar || !navs.length || bar.classList.contains('side')) return;
+    const links = navs.flatMap(n => $$('a[href^="#"]', n));
+    const btn = document.createElement('button');
+    btn.className = 'mm-btn'; btn.type = 'button'; btn.setAttribute('aria-label', 'Ouvrir le menu'); btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', 'mm');
+    btn.innerHTML = '<span></span><span></span>';
+    const panel = document.createElement('div');
+    panel.className = 'mm'; panel.id = 'mm'; panel.setAttribute('data-lenis-prevent', ''); panel.setAttribute('aria-hidden', 'true');
+    panel.innerHTML = '<ul>' + links.map((a, i) => '<li style="--i:' + i + '"><a href="' + a.getAttribute('href') + '"><i>' + String(i + 1).padStart(2, '0') + '</i>' + a.textContent.replace(/[→↗]/g, '').trim() + '</a></li>').join('') + '</ul>';
+    bar.classList.add('has-mm'); bar.appendChild(btn); document.body.appendChild(panel);
+    const set = open => {
+      root.classList.toggle('mm-open', open);
+      btn.setAttribute('aria-expanded', open); btn.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      panel.setAttribute('aria-hidden', !open);
+      if (window.__lenis) open ? window.__lenis.stop() : window.__lenis.start();
+    };
+    btn.addEventListener('click', () => set(!root.classList.contains('mm-open')));
+    panel.addEventListener('click', e => { if (e.target.closest('a')) set(false); }, true);
+    addEventListener('keydown', e => { if (e.key === 'Escape') set(false); });
+    matchMedia('(min-width:901px)').addEventListener('change', e => { if (e.matches) set(false); });
+  })();
+
   /* accordéon : fonctionne même sans animation */
   $$('.acc__h').forEach(b => b.addEventListener('click', () => {
     const a = b.closest('.acc'), open = !a.classList.contains('is-open');
@@ -26,6 +51,7 @@
     const hover = matchMedia('(hover:hover)').matches;
 
     const lenis = new Lenis({ lerp: 0.09 });
+    window.__lenis = lenis;
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add(t => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
@@ -98,7 +124,7 @@
     gsap.from('.hero__ph', { clipPath: 'circle(0% at 50% 50%)', duration: 1.6, ease: 'power3.inOut', delay: 0.2 });
     gsap.from('.tg', { scale: 0, duration: 0.8, ease: 'back.out(2)', stagger: 0.12, delay: 1.1 });
     gsap.from('.hero__tag', { y: 30, autoAlpha: 0, duration: 1, ease: 'power3.out', delay: 1.5 });
-    if (desktop) gsap.to('.hero__vis', { yPercent: -6, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+    gsap.to('.hero__vis', { yPercent: -6, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
 
     /* ===== méthode : la roue PDCA tourne et s'allume au fil des étapes ===== */
     const quads = $$('.q'), steps = $$('.step'), wheel = $('.wheel__r');
@@ -109,9 +135,9 @@
       $$('.ql').forEach(t => gsap.to(t, { rotation: 90 * i, duration: 1, ease: 'power3.inOut', svgOrigin: t.getAttribute('x') + ' ' + t.getAttribute('y') }));
     };
     setStep(0);
-    if (desktop) {
-      steps.forEach((s, i) => ScrollTrigger.create({ trigger: s, start: 'top 55%', end: 'bottom 55%', onToggle: self => { if (self.isActive) setStep(i); } }));
-    } else { quads.forEach(q => q.classList.add('on')); steps.forEach(s => s.classList.add('on')); }
+    {
+      steps.forEach((s, i) => ScrollTrigger.create({ trigger: s, start: desktop ? 'top 55%' : 'top 62%', end: desktop ? 'bottom 55%' : 'bottom 62%', onToggle: self => { if (self.isActive) setStep(i); } }));
+    }
 
     /* ===== langues ===== */
     $$('.langs i').forEach(b => {
